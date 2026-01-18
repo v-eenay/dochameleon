@@ -1,0 +1,258 @@
+% ============================================================
+% sample_style.sty - Comprehensive LaTeX Style Package
+% Demonstrates: colors, fonts, boxes, headers, code blocks
+% ============================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{sample_style}[2026/01/18 Sample Style Package]
+
+% ============================================================
+% FONTS
+% ============================================================
+\RequirePackage{lmodern}           % Latin Modern (scalable)
+\RequirePackage[T1]{fontenc}       % Better font encoding
+\RequirePackage{textcomp}          % Additional text symbols
+
+% ============================================================
+% COLORS
+% ============================================================
+\RequirePackage[dvipsnames,svgnames,x11names]{xcolor}
+
+% Custom color palette
+\definecolor{primaryBlue}{RGB}{25, 84, 123}
+\definecolor{secondaryGreen}{RGB}{46, 125, 50}
+\definecolor{accentOrange}{RGB}{230, 126, 34}
+\definecolor{warningRed}{RGB}{192, 57, 43}
+\definecolor{lightGray}{RGB}{245, 245, 245}
+\definecolor{darkGray}{RGB}{64, 64, 64}
+\definecolor{codeBackground}{RGB}{248, 248, 248}
+\definecolor{codeBorder}{RGB}{200, 200, 200}
+
+% ============================================================
+% PAGE LAYOUT
+% ============================================================
+\RequirePackage[
+    margin=1in,
+    headheight=14pt
+]{geometry}
+
+% ============================================================
+% HEADERS AND FOOTERS
+% ============================================================
+\RequirePackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\textcolor{darkGray}{\leftmark}}
+\fancyhead[R]{\footnotesize\textcolor{darkGray}{Sample Document}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% ============================================================
+% SECTION STYLING
+% ============================================================
+\RequirePackage{titlesec}
+
+\titleformat{\section}
+    {\Large\bfseries\color{primaryBlue}}
+    {\thesection}{1em}{}
+    [\color{primaryBlue}\titlerule]
+
+\titleformat{\subsection}
+    {\large\bfseries\color{secondaryGreen}}
+    {\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+    {\normalsize\bfseries\color{accentOrange}}
+    {\thesubsubsection}{1em}{}
+
+% ============================================================
+% TABLES
+% ============================================================
+\RequirePackage{array}
+\RequirePackage{booktabs}
+\RequirePackage{tabularx}
+\RequirePackage{multirow}
+\RequirePackage{colortbl}
+\RequirePackage{float}
+
+% Custom column types
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+% ============================================================
+% LISTS
+% ============================================================
+\RequirePackage{enumitem}
+\RequirePackage{pifont}
+
+\setlist[itemize]{
+    leftmargin=*,
+    itemsep=4pt,
+    parsep=0pt
+}
+\setlist[itemize,1]{label={\color{primaryBlue}\ding{110}}}
+\setlist[itemize,2]{label={\color{secondaryGreen}\ding{118}}}
+\setlist[itemize,3]{label={\color{accentOrange}$\bullet$}}
+
+\setlist[enumerate]{
+    leftmargin=*,
+    itemsep=4pt,
+    parsep=0pt
+}
+\setlist[enumerate,1]{label={\color{primaryBlue}\arabic*.}}
+\setlist[enumerate,2]{label={\color{secondaryGreen}\alph*)}}
+
+% ============================================================
+% BOXES (tcolorbox)
+% ============================================================
+\RequirePackage[most]{tcolorbox}
+
+% Information box
+\newtcolorbox{infobox}[1][]{
+    colback=blue!5!white,
+    colframe=primaryBlue,
+    fonttitle=\bfseries,
+    title={#1},
+    boxrule=1pt,
+    arc=3pt,
+    left=8pt,
+    right=8pt,
+    top=6pt,
+    bottom=6pt
+}
+
+% Warning box
+\newtcolorbox{warningbox}[1][]{
+    colback=red!5!white,
+    colframe=warningRed,
+    fonttitle=\bfseries,
+    title={#1},
+    boxrule=1pt,
+    arc=3pt,
+    left=8pt,
+    right=8pt,
+    top=6pt,
+    bottom=6pt
+}
+
+% Success box
+\newtcolorbox{successbox}[1][]{
+    colback=green!5!white,
+    colframe=secondaryGreen,
+    fonttitle=\bfseries,
+    title={#1},
+    boxrule=1pt,
+    arc=3pt,
+    left=8pt,
+    right=8pt,
+    top=6pt,
+    bottom=6pt
+}
+
+% Tip box
+\newtcolorbox{tipbox}[1][]{
+    colback=orange!5!white,
+    colframe=accentOrange,
+    fonttitle=\bfseries,
+    title={#1},
+    boxrule=1pt,
+    arc=3pt,
+    left=8pt,
+    right=8pt,
+    top=6pt,
+    bottom=6pt
+}
+
+% ============================================================
+% CODE LISTINGS
+% ============================================================
+\RequirePackage{listings}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codeBackground},
+    frame=single,
+    framerule=0.5pt,
+    rulecolor=\color{codeBorder},
+    breaklines=true,
+    breakatwhitespace=false,
+    showstringspaces=false,
+    tabsize=4,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    xleftmargin=15pt,
+    framexleftmargin=15pt,
+    aboveskip=12pt,
+    belowskip=12pt,
+    captionpos=b
+}
+
+% Python style
+\lstdefinestyle{python}{
+    language=Python,
+    keywordstyle=\color{primaryBlue}\bfseries,
+    stringstyle=\color{secondaryGreen},
+    commentstyle=\color{gray}\itshape,
+    morekeywords={self, True, False, None}
+}
+
+% JavaScript style (custom definition since not built-in)
+\lstdefinelanguage{JavaScript}{
+    keywords={break, case, catch, continue, debugger, default, delete, do, else, finally, for, function, if, in, instanceof, new, return, switch, this, throw, try, typeof, var, void, while, with, const, let, async, await, class, export, import, extends, static, get, set, of},
+    sensitive=true,
+    comment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]',
+    morestring=[b]"
+}
+
+\lstdefinestyle{javascript}{
+    language=JavaScript,
+    keywordstyle=\color{primaryBlue}\bfseries,
+    stringstyle=\color{secondaryGreen},
+    commentstyle=\color{gray}\itshape
+}
+
+% Bash/Shell style
+\lstdefinestyle{bash}{
+    language=bash,
+    keywordstyle=\color{primaryBlue}\bfseries,
+    stringstyle=\color{secondaryGreen},
+    commentstyle=\color{gray}\itshape
+}
+
+% Inline code command
+\newcommand{\code}[1]{\texttt{\colorbox{codeBackground}{#1}}}
+
+% ============================================================
+% GRAPHICS
+% ============================================================
+\RequirePackage{graphicx}
+\graphicspath{{images/}}
+
+% ============================================================
+% HYPERLINKS
+% ============================================================
+\RequirePackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryBlue,
+    urlcolor=accentOrange,
+    citecolor=secondaryGreen,
+    pdfborder={0 0 0}
+}
+
+% ============================================================
+% MATH
+% ============================================================
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+
+% ============================================================
+% MISC
+% ============================================================
+\RequirePackage{lipsum}  % For dummy text
+
+\endinput

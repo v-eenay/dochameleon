@@ -1,0 +1,433 @@
+% ============================================================
+% sample_document.tex - Comprehensive LaTeX Sample
+% Demonstrates all formatting features for conversion testing
+% ============================================================
+\documentclass[11pt, a4paper]{article}
+
+\usepackage{sample_style}
+
+% Document metadata
+\title{\textcolor{primaryBlue}{\textbf{Comprehensive LaTeX Sample Document}}}
+\author{Document Converter Test Suite}
+\date{January 2026}
+
+\begin{document}
+
+% ============================================================
+% TITLE PAGE
+% ============================================================
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries\textcolor{primaryBlue}{Comprehensive LaTeX}}\\[0.5cm]
+    {\Huge\bfseries\textcolor{primaryBlue}{Sample Document}}\\[1.5cm]
+    
+    {\Large\textcolor{darkGray}{Testing Document Conversion}}\\[0.5cm]
+    {\large\textcolor{gray}{Tables • Code Blocks • Images • Colors • Lists}}\\[2cm]
+    
+    \includegraphics[width=0.4\textwidth]{placeholder.png}\\[2cm]
+    
+    {\large\textbf{Version 1.0}}\\[0.5cm]
+    {\large January 2026}\\[2cm]
+    
+    \vfill
+    {\small Created for Universal Document Converter Testing}
+\end{titlepage}
+
+% ============================================================
+% TABLE OF CONTENTS
+% ============================================================
+\tableofcontents
+\newpage
+
+% ============================================================
+% SECTION 1: TEXT FORMATTING
+% ============================================================
+\section{Text Formatting}
+
+This section demonstrates various text formatting options available in LaTeX.
+
+\subsection{Basic Text Styles}
+
+Here are examples of basic text formatting:
+\begin{itemize}
+    \item \textbf{Bold text} for emphasis
+    \item \textit{Italic text} for titles and terms
+    \item \underline{Underlined text} for special marking
+    \item \texttt{Monospace text} for code inline
+    \item \textsc{Small Caps} for headers
+    \item \textbf{\textit{Bold and italic}} combined
+\end{itemize}
+
+\subsection{Text Colors}
+
+Colors add visual hierarchy to documents:
+\begin{itemize}
+    \item \textcolor{primaryBlue}{Primary Blue Text}
+    \item \textcolor{secondaryGreen}{Secondary Green Text}
+    \item \textcolor{accentOrange}{Accent Orange Text}
+    \item \textcolor{warningRed}{Warning Red Text}
+    \item \textcolor{darkGray}{Dark Gray Text}
+\end{itemize}
+
+\subsection{Font Sizes}
+
+LaTeX provides multiple font sizes:
+\begin{center}
+{\tiny tiny} $\rightarrow$
+{\scriptsize scriptsize} $\rightarrow$
+{\footnotesize footnotesize} $\rightarrow$
+{\small small} $\rightarrow$
+{\normalsize normal} $\rightarrow$
+{\large large} $\rightarrow$
+{\Large Large} $\rightarrow$
+{\LARGE LARGE}
+\end{center}
+
+% ============================================================
+% SECTION 2: LISTS
+% ============================================================
+\section{Lists and Enumerations}
+
+\subsection{Bullet Lists}
+
+A simple bullet list:
+\begin{itemize}
+    \item First item in the list
+    \item Second item with more detail
+    \item Third item with nested content:
+    \begin{itemize}
+        \item Nested item A
+        \item Nested item B
+        \begin{itemize}
+            \item Deeply nested item
+        \end{itemize}
+    \end{itemize}
+    \item Fourth item
+\end{itemize}
+
+\subsection{Numbered Lists}
+
+An enumerated list:
+\begin{enumerate}
+    \item First step in the process
+    \item Second step with sub-steps:
+    \begin{enumerate}
+        \item Sub-step A
+        \item Sub-step B
+        \item Sub-step C
+    \end{enumerate}
+    \item Third step
+    \item Fourth step
+\end{enumerate}
+
+\subsection{Description Lists}
+
+\begin{description}
+    \item[Term One] This is the definition of the first term.
+    \item[Term Two] This is a longer definition that explains the second term in more detail.
+    \item[Term Three] Another definition here.
+\end{description}
+
+% ============================================================
+% SECTION 3: TABLES
+% ============================================================
+\section{Tables}
+
+\subsection{Simple Table}
+
+\begin{table}[H]
+\centering
+\caption{Simple Data Table}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Name} & \textbf{Value} & \textbf{Status} \\
+\midrule
+Item Alpha & 100 & Active \\
+Item Beta & 250 & Pending \\
+Item Gamma & 75 & Complete \\
+Item Delta & 180 & Active \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Colored Table}
+
+\begin{table}[H]
+\centering
+\caption{Table with Colors and Formatting}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\rowcolor{primaryBlue!20}
+\textbf{Category} & \textbf{Q1} & \textbf{Q2} & \textbf{Q3} \\
+\hline
+Sales & \$10,000 & \$12,500 & \$15,000 \\
+\hline
+\rowcolor{lightGray}
+Marketing & \$5,000 & \$5,500 & \$6,000 \\
+\hline
+Development & \$20,000 & \$22,000 & \$25,000 \\
+\hline
+\rowcolor{lightGray}
+Operations & \$8,000 & \$8,500 & \$9,000 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Wide Table with TabularX}
+
+\begin{table}[H]
+\centering
+\caption{Full-Width Table}
+\begin{tabularx}{\textwidth}{|l|X|c|}
+\hline
+\rowcolor{secondaryGreen!20}
+\textbf{Feature} & \textbf{Description} & \textbf{Status} \\
+\hline
+User Authentication & Secure login system with multi-factor authentication support & \textcolor{secondaryGreen}{Done} \\
+\hline
+Data Export & Export data to CSV, Excel, and PDF formats & \textcolor{accentOrange}{In Progress} \\
+\hline
+API Integration & RESTful API with OAuth 2.0 authentication & \textcolor{warningRed}{Pending} \\
+\hline
+Mobile Support & Responsive design for mobile devices & \textcolor{secondaryGreen}{Done} \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================
+% SECTION 4: CODE BLOCKS
+% ============================================================
+\section{Code Blocks and Listings}
+
+\subsection{Python Code}
+
+Here is an example of Python code:
+
+\begin{lstlisting}[style=python, caption={Python Function Example}]
+def fibonacci(n: int) -> list:
+    """Generate Fibonacci sequence up to n terms."""
+    if n <= 0:
+        return []
+    elif n == 1:
+        return [0]
+    
+    sequence = [0, 1]
+    for i in range(2, n):
+        next_val = sequence[i-1] + sequence[i-2]
+        sequence.append(next_val)
+    
+    return sequence
+
+# Example usage
+result = fibonacci(10)
+print(f"Fibonacci: {result}")
+\end{lstlisting}
+
+\subsection{JavaScript Code}
+
+Modern JavaScript example:
+
+\begin{lstlisting}[style=javascript, caption={JavaScript Async Function}]
+const fetchUserData = async (userId) => {
+    try {
+        const response = await fetch(`/api/users/${userId}`);
+        if (!response.ok) {
+            throw new Error('User not found');
+        }
+        const userData = await response.json();
+        return userData;
+    } catch (error) {
+        console.error('Error:', error.message);
+        return null;
+    }
+};
+
+// Usage
+fetchUserData(123).then(user => console.log(user));
+\end{lstlisting}
+
+\subsection{Shell Commands}
+
+Terminal commands example:
+
+\begin{lstlisting}[style=bash, caption={Common Shell Commands}]
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+python main.py --config production.yml
+
+# Build and deploy
+docker build -t myapp:latest .
+docker push myapp:latest
+kubectl apply -f deployment.yaml
+\end{lstlisting}
+
+\subsection{Inline Code}
+
+You can also use inline code like \code{print("Hello")} or reference variables like \code{user\_id} and commands like \code{npm install}.
+
+% ============================================================
+% SECTION 5: BOXES
+% ============================================================
+\section{Information Boxes}
+
+\subsection{Info Box}
+
+\begin{infobox}[Information]
+This is an information box. It's useful for highlighting important notes or additional context that readers should be aware of.
+\end{infobox}
+
+\subsection{Warning Box}
+
+\begin{warningbox}[Warning]
+This is a warning box. Use it to alert readers about potential issues, deprecated features, or important cautions.
+\end{warningbox}
+
+\subsection{Success Box}
+
+\begin{successbox}[Success]
+This is a success box. Perfect for confirming completed actions, successful operations, or positive outcomes.
+\end{successbox}
+
+\subsection{Tip Box}
+
+\begin{tipbox}[Pro Tip]
+This is a tip box. Use it to share helpful hints, best practices, or shortcuts that improve user experience.
+\end{tipbox}
+
+% ============================================================
+% SECTION 6: MATHEMATICS
+% ============================================================
+\section{Mathematical Formulas}
+
+\subsection{Inline Math}
+
+Einstein's famous equation $E = mc^2$ shows the relationship between energy and mass. The quadratic formula is $x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$.
+
+\subsection{Display Math}
+
+The Gaussian distribution is defined as:
+
+\begin{equation}
+f(x) = \frac{1}{\sigma\sqrt{2\pi}} e^{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2}
+\end{equation}
+
+The sum of a geometric series:
+
+\begin{equation}
+\sum_{n=0}^{\infty} ar^n = \frac{a}{1-r}, \quad |r| < 1
+\end{equation}
+
+A matrix example:
+
+\begin{equation}
+\mathbf{A} = \begin{pmatrix}
+a_{11} & a_{12} & a_{13} \\
+a_{21} & a_{22} & a_{23} \\
+a_{31} & a_{32} & a_{33}
+\end{pmatrix}
+\end{equation}
+
+% ============================================================
+% SECTION 7: IMAGES
+% ============================================================
+\section{Images and Figures}
+
+\subsection{Basic Image}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\textwidth]{placeholder.png}
+\caption{A sample placeholder image demonstrating image inclusion}
+\label{fig:sample}
+\end{figure}
+
+\subsection{Image with Caption}
+
+Figure \ref{fig:sample} shows how images can be referenced in the document. Images can be scaled, rotated, and positioned using various options.
+
+% ============================================================
+% SECTION 8: HYPERLINKS
+% ============================================================
+\section{Hyperlinks and References}
+
+\subsection{External Links}
+
+Visit \href{https://www.example.com}{Example Website} for more information. You can also email at \href{mailto:test@example.com}{test@example.com}.
+
+\subsection{Internal References}
+
+See Section \ref{sec:conclusion} for the conclusion. Refer back to Figure \ref{fig:sample} for the image example.
+
+% ============================================================
+% SECTION 9: MIXED CONTENT
+% ============================================================
+\section{Mixed Content Example}
+
+This section combines multiple elements:
+
+\begin{infobox}[Project Requirements]
+The following requirements must be met:
+\begin{enumerate}
+    \item \textbf{Performance}: Response time under 200ms
+    \item \textbf{Security}: All data encrypted with AES-256
+    \item \textbf{Scalability}: Support for 10,000+ concurrent users
+\end{enumerate}
+\end{infobox}
+
+\vspace{0.5cm}
+
+The implementation uses the following technology stack:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Component} & \textbf{Technology} \\
+\midrule
+Backend & Python 3.11 with FastAPI \\
+Frontend & React 18 with TypeScript \\
+Database & PostgreSQL 15 \\
+Cache & Redis 7.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Sample configuration code:
+
+\begin{lstlisting}[style=python]
+config = {
+    "debug": False,
+    "database_url": "postgresql://localhost/mydb",
+    "redis_url": "redis://localhost:6379",
+    "secret_key": os.environ["SECRET_KEY"]
+}
+\end{lstlisting}
+
+% ============================================================
+% CONCLUSION
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+This document demonstrates the full range of LaTeX formatting capabilities:
+
+\begin{itemize}
+    \item \textcolor{primaryBlue}{Text formatting} with colors, sizes, and styles
+    \item \textcolor{secondaryGreen}{Lists} including bullets, numbers, and descriptions
+    \item \textcolor{accentOrange}{Tables} with colors, borders, and full-width layouts
+    \item \textcolor{warningRed}{Code blocks} with syntax highlighting
+    \item Information boxes for alerts and tips
+    \item Mathematical formulas inline and displayed
+    \item Images and figures with captions
+    \item Hyperlinks and cross-references
+\end{itemize}
+
+\begin{successbox}[Document Complete]
+This sample document is ready for conversion testing. All major LaTeX features have been demonstrated.
+\end{successbox}
+
+\end{document}
