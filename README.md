@@ -29,13 +29,18 @@ pip install -r requirements.txt
 python main.py
 ```
 
+The program will:
+1. Display available conversion options
+2. Ask for the input file path
+3. Ask for the output folder (press Enter for default `./output`)
+
 ### Direct Mode
 
 ```bash
-python main.py --mode tex2pdf --input ./input --output ./output
-python main.py --mode tex2docx --input ./input --output ./output
-python main.py --mode pdf2docx --input ./input --output ./output
-python main.py --mode docx2pdf --input ./input --output ./output
+python main.py --mode tex2pdf --input ./input/document.tex --output ./output
+python main.py --mode tex2docx --input ./input/document.tex
+python main.py --mode pdf2docx --input ./docs/file.pdf --output ./converted
+python main.py --mode docx2pdf --input ./docs/report.docx
 ```
 
 ### Options
@@ -43,8 +48,8 @@ python main.py --mode docx2pdf --input ./input --output ./output
 | Option | Description |
 |--------|-------------|
 | `-m, --mode` | Conversion mode: `tex2pdf`, `tex2docx`, `pdf2docx`, `docx2pdf` |
-| `-i, --input` | Input directory (default: current directory) |
-| `-o, --output` | Output directory (default: `./converted`) |
+| `-i, --input` | Input file path |
+| `-o, --output` | Output directory (default: `./output`) |
 
 ## Project Structure
 

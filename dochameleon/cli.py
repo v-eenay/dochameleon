@@ -3,16 +3,19 @@ Command-line interface for Dochameleon.
 """
 
 import argparse
+import os
 from pathlib import Path
 
 from .packages import check_and_install_packages, check_latex_installed
-from .utils import find_files
 from .pipeline import (
-    convert_tex_to_pdf,
-    convert_tex_to_docx,
-    convert_pdf_to_docx,
-    convert_docx_to_pdf_batch,
+    convert_single_tex_to_pdf,
+    convert_single_tex_to_docx,
+    convert_single_pdf_to_docx,
+    convert_single_docx_to_pdf,
 )
+
+# Default output directory (relative to script location)
+DEFAULT_OUTPUT_DIR = Path(__file__).parent.parent / "output"
 
 
 def print_header():
@@ -47,8 +50,56 @@ def get_user_choice() -> str:
         print("Invalid choice. Please enter 0-4.")
 
 
-def run_conversion(mode: str, input_dir: Path, output_dir: Path, packages: dict):
-    """Run the specified conversion mode."""
+def get_input_file(expected_ext: str) -> Path:
+    """Prompt user for input file path and validate it."""
+    while True:
+        file_path = input(f"\nEnter path to .{expected_ext} file: ").strip()
+        
+        # Remove quotes if present
+        file_path = file_path.strip('"').strip("'")
+        
+        if not file_path:
+            print(f"  ✗ Please enter a file path.")
+            continue
+        
+        path = Path(file_path)
+        
+        if not path.exists():
+            print(f"  ✗ File not found: {path}")
+            continue
+        
+        if not path.is_file():
+            print(f"  ✗ Not a file: {path}")
+            continue
+        
+        if path.suffix.lower() != f".{expected_ext}":
+            print(f"  ✗ Expected .{expected_ext} file, got {path.suffix}")
+            continue
+        
+        return path.resolve()
+
+
+def get_output_dir() -> Path:
+    """Prompt user for output directory, with fallback to default."""
+    output_path = input(f"\nEnter output folder (press Enter for default): ").strip()
+    
+    # Remove quotes if present
+    output_path = output_path.strip('"').strip("'")
+    
+    if not output_path:
+        output_dir = DEFAULT_OUTPUT_DIR
+        print(f"  Using default: {output_dir}")
+    else:
+        output_dir = Path(output_path).resolve()
+    
+    # Create directory if it doesn't exist
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    return output_dir
+
+
+def run_single_conversion(mode: str, input_file: Path, output_dir: Path, packages: dict):
+    """Run conversion for a single file."""
     
     # Check requirements
     if mode in ['tex2pdf', 'tex2docx']:
@@ -67,38 +118,21 @@ def run_conversion(mode: str, input_dir: Path, output_dir: Path, packages: dict)
             print("\n✗ Error: docx2pdf is required but not available.")
             return
     
-    # Create output directory
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Find source files
-    ext_map = {
-        'tex2pdf': 'tex',
-        'tex2docx': 'tex',
-        'pdf2docx': 'pdf',
-        'docx2pdf': 'docx'
-    }
-    source_ext = ext_map[mode]
-    source_files = find_files(input_dir, source_ext)
-    
-    if not source_files:
-        print(f"\n✗ No .{source_ext} files found in {input_dir}")
-        return
-    
     # Show what will be converted
     target_ext = 'pdf' if mode in ['tex2pdf', 'docx2pdf'] else 'docx'
-    print(f"\nConverting {len(source_files)} .{source_ext} file(s) to .{target_ext}")
+    print(f"\nConverting: {input_file.name} → .{target_ext}")
     print(f"Output directory: {output_dir}")
     print("-" * 50)
     
     # Run conversion
     if mode == 'tex2pdf':
-        success, failed = convert_tex_to_pdf(input_dir, output_dir)
+        success = convert_single_tex_to_pdf(input_file, output_dir)
     elif mode == 'tex2docx':
-        success, failed = convert_tex_to_docx(input_dir, output_dir)
+        success = convert_single_tex_to_docx(input_file, output_dir)
     elif mode == 'pdf2docx':
-        success, failed = convert_pdf_to_docx(input_dir, output_dir)
+        success = convert_single_pdf_to_docx(input_file, output_dir)
     elif mode == 'docx2pdf':
-        success, failed = convert_docx_to_pdf_batch(input_dir, output_dir)
+        success = convert_single_docx_to_pdf(input_file, output_dir)
     else:
         print(f"Unknown mode: {mode}")
         return
@@ -106,11 +140,14 @@ def run_conversion(mode: str, input_dir: Path, output_dir: Path, packages: dict)
     # Summary
     print()
     print("-" * 50)
-    print(f"\n✓ Completed: {success} successful, {failed} failed")
-    print(f"Output: {output_dir}")
+    if success:
+        print(f"\n✓ Conversion completed successfully")
+        print(f"Output: {output_dir}")
+    else:
+        print(f"\n✗ Conversion failed")
 
 
-def interactive_mode(input_dir: Path, output_dir: Path, packages: dict):
+def interactive_mode(packages: dict):
     """Run in interactive mode with menu."""
     print_menu()
     
@@ -120,16 +157,24 @@ def interactive_mode(input_dir: Path, output_dir: Path, packages: dict):
         print("\nGoodbye!")
         return
     
-    # Map choices to modes
+    # Map choices to modes and expected extensions
     mode_map = {
-        '1': 'tex2pdf',
-        '2': 'tex2docx',
-        '3': 'pdf2docx',
-        '4': 'docx2pdf'
+        '1': ('tex2pdf', 'tex'),
+        '2': ('tex2docx', 'tex'),
+        '3': ('pdf2docx', 'pdf'),
+        '4': ('docx2pdf', 'docx')
     }
     
-    mode = mode_map[choice]
-    run_conversion(mode, input_dir, output_dir, packages)
+    mode, expected_ext = mode_map[choice]
+    
+    # Get input file from user
+    input_file = get_input_file(expected_ext)
+    
+    # Get output directory from user
+    output_dir = get_output_dir()
+    
+    # Run conversion
+    run_single_conversion(mode, input_file, output_dir, packages)
 
 
 def main():
@@ -144,13 +189,11 @@ def main():
     )
     parser.add_argument(
         "--input", "-i",
-        default=".",
-        help="Input directory (default: current directory)"
+        help="Input file path"
     )
     parser.add_argument(
         "--output", "-o",
-        default="./converted",
-        help="Output directory (default: ./converted)"
+        help="Output directory (default: ./output)"
     )
     
     args = parser.parse_args()
@@ -169,19 +212,25 @@ def main():
     
     print()
     
-    input_dir = Path(args.input).resolve()
-    output_dir = Path(args.output).resolve()
-    
-    print(f"Input directory:  {input_dir}")
-    print(f"Output directory: {output_dir}")
-    print()
-    
-    if args.mode:
-        # Direct mode
-        run_conversion(args.mode, input_dir, output_dir, packages)
+    if args.mode and args.input:
+        # Direct mode with file
+        input_file = Path(args.input).resolve()
+        
+        if not input_file.exists():
+            print(f"✗ Error: File not found: {input_file}")
+            return
+        
+        if args.output:
+            output_dir = Path(args.output).resolve()
+        else:
+            output_dir = DEFAULT_OUTPUT_DIR
+        
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        run_single_conversion(args.mode, input_file, output_dir, packages)
     else:
         # Interactive mode
-        interactive_mode(input_dir, output_dir, packages)
+        interactive_mode(packages)
 
 
 if __name__ == "__main__":
