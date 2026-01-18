@@ -118,20 +118,21 @@ class DropZone(QFrame):
     def dropEvent(self, event):
         files = [url.toLocalFile() for url in event.mimeData().urls()]
         if files:
-            self.set_file(files[0])
+            self.set_file(files[0], emit_signal=True)
         self.setup_ui()
     
     def mousePressEvent(self, event):
         self.file_dropped.emit("")
     
-    def set_file(self, file_path: str):
+    def set_file(self, file_path: str, emit_signal: bool = False):
         self.file_path = file_path
         if file_path:
             name = Path(file_path).name
             self.icon_label.setText("✓")
             self.text_label.setText("File selected:")
             self.file_label.setText(name)
-            self.file_dropped.emit(file_path)
+            if emit_signal:
+                self.file_dropped.emit(file_path)
         else:
             self.icon_label.setText("📄")
             self.text_label.setText("Drop file here or click to browse")
