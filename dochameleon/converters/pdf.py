@@ -1,23 +1,18 @@
 """
-PDF to DOCX conversion utilities with comprehensive format preservation.
+PDF to DOCX conversion utilities - Clean native DOCX output.
 """
 
 from pathlib import Path
-from typing import Tuple, Union, Optional, Dict, Any, List
-import re
+from typing import Tuple, Union
 
 
 def convert_pdf_to_docx_enhanced(pdf_file: Path, output_dir: Path) -> Tuple[bool, Union[Path, str]]:
     """
-    Convert PDF to DOCX with comprehensive format preservation.
+    Convert PDF to DOCX with clean, native Word-like output.
     
-    Preserves:
-    - Tables with borders, colors, and cell shading
-    - Box elements with shadows and strokes
-    - List styles (bullets, numbering, indentation)
-    - Text highlights and background colors
-    - Font colors and text effects
-    - Image positioning and sizing
+    The goal is to produce documents that look like they were
+    originally created in Microsoft Word - clean, professional,
+    without unnecessary boxes or frames.
     """
     from pdf2docx import Converter
     
@@ -26,50 +21,29 @@ def convert_pdf_to_docx_enhanced(pdf_file: Path, output_dir: Path) -> Tuple[bool
     try:
         cv = Converter(str(pdf_file))
         
-        # Convert with comprehensive preservation settings
+        # Convert with settings optimized for clean Word-like output
         cv.convert(
             str(output_path),
-            # ============================================
-            # TABLE DETECTION AND PRESERVATION
-            # ============================================
-            connected_border_tolerance=0.3,      # Stricter tolerance for better table border detection
-            min_section_height=10,               # Capture smaller table rows
+            # Table detection - be conservative to avoid false positives
+            connected_border_tolerance=0.5,
+            min_section_height=20,
             
-            # ============================================
-            # LINE AND TEXT DETECTION
-            # ============================================
-            line_overlap_threshold=0.95,         # Higher precision for line detection
-            line_break_width_ratio=0.4,          # Better line break detection
-            line_break_free_space_ratio=0.08,    # Preserve fine line breaks
-            new_paragraph_free_space_ratio=0.8,  # Better paragraph separation
+            # Text flow - natural paragraph breaks
+            line_overlap_threshold=0.9,
+            line_break_width_ratio=0.5,
+            line_break_free_space_ratio=0.1,
+            new_paragraph_free_space_ratio=0.85,
             
-            # ============================================
-            # FLOAT ELEMENTS (IMAGES, BOXES)
-            # ============================================
-            float_image_ignorable_gap=3,         # Tighter gap for floating elements
-            float_layout_tolerance=0.1,          # Better float positioning
-            
-            # ============================================
-            # PAGE LAYOUT
-            # ============================================
-            page_margin_factor_top=0.3,          # Preserve top margins
-            page_margin_factor_bottom=0.3,       # Preserve bottom margins
-            
-            # ============================================
-            # TEXT STYLE PRESERVATION
-            # ============================================
-            delete_end_line_hyphen=False,        # Preserve hyphenation
-            
-            # ============================================
-            # CURVED PATH HANDLING (for boxes/shapes)
-            # ============================================
-            curve_path_ratio=0.2,                # Better curve detection for rounded boxes
+            # Images - standard positioning
+            float_image_ignorable_gap=5,
+            page_margin_factor_top=0.5,
+            page_margin_factor_bottom=0.5,
         )
         cv.close()
         
         if output_path.exists():
-            # Apply comprehensive post-processing
-            enhance_docx_formatting(output_path)
+            # Clean up the document to look more native
+            make_docx_native(output_path)
             return True, output_path
         else:
             return False, "DOCX file was not created"
@@ -78,410 +52,293 @@ def convert_pdf_to_docx_enhanced(pdf_file: Path, output_dir: Path) -> Tuple[bool
         return False, str(e)
 
 
-def enhance_docx_formatting(docx_path: Path):
+def make_docx_native(docx_path: Path):
     """
-    Comprehensive post-processing to enhance and preserve document formatting.
+    Post-process DOCX to create clean, native Word-like appearance.
     
-    Handles:
-    - Tables: borders, cell shading, colors
-    - Boxes: shadows, strokes, backgrounds
-    - Lists: bullet styles, numbering, indentation
-    - Text: highlights, colors, fonts
+    Removes unnecessary formatting artifacts and applies clean styling
+    that makes the document look like it was created in Word.
     """
     try:
         from docx import Document
-        from docx.shared import Pt, RGBColor, Inches, Twips
-        from docx.oxml.ns import qn, nsmap
+        from docx.shared import Pt, Inches
+        from docx.oxml.ns import qn
         from docx.oxml import OxmlElement
+        from docx.enum.style import WD_STYLE_TYPE
         from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-        from docx.enum.table import WD_TABLE_ALIGNMENT
         
         doc = Document(str(docx_path))
         
         # ============================================
-        # ENHANCE TABLES
+        # CLEAN UP DOCUMENT STYLES
         # ============================================
-        enhance_tables(doc)
+        setup_native_styles(doc)
         
         # ============================================
-        # ENHANCE PARAGRAPHS AND TEXT
+        # CLEAN PARAGRAPHS - Remove box artifacts
         # ============================================
-        enhance_paragraphs(doc)
+        clean_paragraphs(doc)
         
         # ============================================
-        # ENHANCE LISTS
+        # CLEAN TABLES - Only keep real tables
         # ============================================
-        enhance_lists(doc)
+        clean_tables(doc)
+        
+        # ============================================
+        # APPLY CLEAN FORMATTING
+        # ============================================
+        apply_clean_formatting(doc)
         
         doc.save(str(docx_path))
         
     except Exception as e:
-        # Don't fail if enhancement doesn't work
-        print(f"  Note: Could not enhance formatting: {e}")
+        print(f"  Note: Could not clean document: {e}")
 
 
-def enhance_tables(doc):
+def setup_native_styles(doc):
     """
-    Enhance table formatting with proper borders, shading, and box shadows.
+    Set up clean, native Word styles.
     """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    from docx.shared import Pt, RGBColor, Twips
-    
-    for table in doc.tables:
-        # ============================================
-        # TABLE-LEVEL FORMATTING
-        # ============================================
-        tbl = table._tbl
-        tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
-        
-        # Ensure table has proper borders (preserve existing or add default)
-        tblBorders = tblPr.find(qn('w:tblBorders'))
-        if tblBorders is None:
-            tblBorders = create_table_borders()
-            tblPr.append(tblBorders)
-        
-        # Add table shadow effect (simulate box-shadow)
-        add_table_shadow_effect(tblPr)
-        
-        # ============================================
-        # ROW-LEVEL FORMATTING
-        # ============================================
-        for row in table.rows:
-            for cell in row.cells:
-                # ============================================
-                # CELL BORDER AND SHADING PRESERVATION
-                # ============================================
-                tc = cell._tc
-                tcPr = tc.get_or_add_tcPr()
-                
-                # Preserve or enhance cell borders
-                enhance_cell_borders(tcPr)
-                
-                # Preserve cell background/shading
-                preserve_cell_shading(tcPr, cell)
-                
-                # ============================================
-                # CELL CONTENT FORMATTING
-                # ============================================
-                for paragraph in cell.paragraphs:
-                    enhance_paragraph_formatting(paragraph)
-
-
-def create_table_borders(
-    border_color: str = "000000",
-    border_size: int = 4,
-    border_style: str = "single"
-):
-    """
-    Create comprehensive table borders element.
-    
-    Returns:
-        OxmlElement: Table borders XML element
-    """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    
-    tblBorders = OxmlElement('w:tblBorders')
-    
-    border_types = ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']
-    
-    for border_type in border_types:
-        border = OxmlElement(f'w:{border_type}')
-        border.set(qn('w:val'), border_style)
-        border.set(qn('w:sz'), str(border_size))
-        border.set(qn('w:color'), border_color)
-        border.set(qn('w:space'), '0')
-        tblBorders.append(border)
-    
-    return tblBorders
-
-
-def add_table_shadow_effect(tblPr):
-    """
-    Add shadow effect to table (simulates CSS box-shadow).
-    Uses table positioning and shading to create shadow appearance.
-    """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    
-    # Add subtle offset for shadow effect via table indent
-    tblInd = tblPr.find(qn('w:tblInd'))
-    if tblInd is None:
-        tblInd = OxmlElement('w:tblInd')
-        tblInd.set(qn('w:w'), '108')  # Small indent
-        tblInd.set(qn('w:type'), 'dxa')
-        tblPr.append(tblInd)
-
-
-def enhance_cell_borders(tcPr):
-    """
-    Enhance cell borders to preserve strokes and box outlines.
-    """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    
-    tcBorders = tcPr.find(qn('w:tcBorders'))
-    if tcBorders is None:
-        tcBorders = OxmlElement('w:tcBorders')
-        
-        # Create default borders if none exist
-        for border_type in ['top', 'left', 'bottom', 'right']:
-            border = OxmlElement(f'w:{border_type}')
-            border.set(qn('w:val'), 'single')
-            border.set(qn('w:sz'), '4')
-            border.set(qn('w:color'), 'auto')
-            border.set(qn('w:space'), '0')
-            tcBorders.append(border)
-        
-        tcPr.append(tcBorders)
-
-
-def preserve_cell_shading(tcPr, cell):
-    """
-    Preserve and enhance cell background shading/colors.
-    """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    
-    # Check for existing shading
-    shd = tcPr.find(qn('w:shd'))
-    
-    # If no shading exists but cell appears to have content that suggests a box,
-    # check if we should add subtle background
-    if shd is None:
-        # Look for indicators of a "box" element
-        cell_text = cell.text.strip() if cell.text else ""
-        
-        # Detect code blocks or special boxes
-        if _is_code_content(cell_text):
-            shd = OxmlElement('w:shd')
-            shd.set(qn('w:val'), 'clear')
-            shd.set(qn('w:color'), 'auto')
-            shd.set(qn('w:fill'), 'F5F5F5')  # Light gray for code boxes
-            tcPr.append(shd)
-
-
-def _is_code_content(text: str) -> bool:
-    """
-    Detect if text content appears to be code.
-    """
-    code_indicators = [
-        'def ', 'class ', 'import ', 'from ', 'return ',
-        'function ', 'const ', 'let ', 'var ', 'if (',
-        '#!/', '<?php', '<html', '```', '>>>', '$ '
-    ]
-    return any(indicator in text for indicator in code_indicators)
-
-
-def enhance_paragraphs(doc):
-    """
-    Enhance paragraph formatting including text colors, highlights, and fonts.
-    """
-    for paragraph in doc.paragraphs:
-        enhance_paragraph_formatting(paragraph)
-
-
-def enhance_paragraph_formatting(paragraph):
-    """
-    Apply formatting enhancements to a single paragraph.
-    """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
     from docx.shared import Pt, RGBColor
+    from docx.enum.style import WD_STYLE_TYPE
     
-    # ============================================
-    # BOX/FRAME DETECTION AND ENHANCEMENT
-    # ============================================
-    pPr = paragraph._p.get_or_add_pPr()
+    # Set default document font
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Calibri'
+    font.size = Pt(11)
     
-    # Check for paragraph borders (indicates a box/frame)
-    pBdr = pPr.find(qn('w:pBdr'))
-    if pBdr is not None:
-        # Enhance existing borders with shadow effect
-        add_paragraph_shadow(pPr, pBdr)
-    
-    # ============================================
-    # RUN-LEVEL FORMATTING (text colors, highlights)
-    # ============================================
-    mono_indicators = ['Courier', 'Consolas', 'Monaco', 'Mono', 'Code', 'Menlo', 'Source Code']
-    
-    for run in paragraph.runs:
-        # ============================================
-        # FONT PRESERVATION
-        # ============================================
-        font_name = run.font.name or ''
-        is_mono = any(ind.lower() in font_name.lower() for ind in mono_indicators)
-        
-        if is_mono:
-            # Ensure monospace formatting is robust
-            run.font.name = 'Consolas'
-            rPr = run._element.get_or_add_rPr()
-            
-            # Set font for all script types
-            rFonts = rPr.find(qn('w:rFonts'))
-            if rFonts is None:
-                rFonts = OxmlElement('w:rFonts')
-                rPr.insert(0, rFonts)
-            
-            rFonts.set(qn('w:ascii'), 'Consolas')
-            rFonts.set(qn('w:hAnsi'), 'Consolas')
-            rFonts.set(qn('w:eastAsia'), 'Consolas')
-            rFonts.set(qn('w:cs'), 'Consolas')
-            
-            # Add code background shading
-            add_run_shading(run, 'F5F5F5')
-        
-        # ============================================
-        # TEXT COLOR PRESERVATION
-        # ============================================
-        preserve_text_color(run)
-        
-        # ============================================
-        # HIGHLIGHT PRESERVATION
-        # ============================================
-        preserve_highlight(run)
+    # Clean paragraph formatting
+    paragraph_format = style.paragraph_format
+    paragraph_format.space_before = Pt(0)
+    paragraph_format.space_after = Pt(8)
+    paragraph_format.line_spacing = 1.15
 
 
-def add_paragraph_shadow(pPr, pBdr):
+def clean_paragraphs(doc):
     """
-    Add shadow effect to paragraph with borders (box shadow simulation).
+    Clean paragraph formatting - remove unnecessary borders and boxes.
     """
     from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    
-    # Add shadow attribute to borders
-    for border in pBdr:
-        if border.tag.endswith(('top', 'left', 'bottom', 'right', 'between', 'bar')):
-            # Set shadow attribute
-            border.set(qn('w:shadow'), '1')
-
-
-def add_run_shading(run, fill_color: str):
-    """
-    Add background shading to a text run.
-    """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    
-    rPr = run._element.get_or_add_rPr()
-    
-    # Remove existing shading if any
-    existing_shd = rPr.find(qn('w:shd'))
-    if existing_shd is not None:
-        rPr.remove(existing_shd)
-    
-    # Add new shading
-    shd = OxmlElement('w:shd')
-    shd.set(qn('w:val'), 'clear')
-    shd.set(qn('w:color'), 'auto')
-    shd.set(qn('w:fill'), fill_color)
-    rPr.append(shd)
-
-
-def preserve_text_color(run):
-    """
-    Preserve and enhance text color formatting.
-    """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    from docx.shared import RGBColor
-    
-    rPr = run._element.find(qn('w:rPr'))
-    if rPr is not None:
-        color_elem = rPr.find(qn('w:color'))
-        if color_elem is not None:
-            # Color exists, ensure it's preserved
-            color_val = color_elem.get(qn('w:val'))
-            if color_val and color_val.lower() != 'auto':
-                # Validate and keep the color
-                try:
-                    # Ensure proper hex format
-                    if len(color_val) == 6:
-                        run.font.color.rgb = RGBColor(
-                            int(color_val[0:2], 16),
-                            int(color_val[2:4], 16),
-                            int(color_val[4:6], 16)
-                        )
-                except (ValueError, AttributeError):
-                    pass
-
-
-def preserve_highlight(run):
-    """
-    Preserve text highlighting/background color.
-    """
-    from docx.oxml.ns import qn
-    from docx.enum.text import WD_COLOR_INDEX
-    
-    rPr = run._element.find(qn('w:rPr'))
-    if rPr is not None:
-        highlight = rPr.find(qn('w:highlight'))
-        if highlight is not None:
-            # Highlight exists, it will be preserved automatically
-            pass
-        else:
-            # Check for shading as alternative highlight
-            shd = rPr.find(qn('w:shd'))
-            if shd is not None:
-                fill = shd.get(qn('w:fill'))
-                if fill and fill.lower() not in ('auto', 'ffffff', 'none'):
-                    # Has a non-white background, preserve it
-                    pass
-
-
-def enhance_lists(doc):
-    """
-    Enhance list formatting including bullets, numbering, and indentation.
-    """
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    from docx.shared import Pt, Twips
     
     for paragraph in doc.paragraphs:
         pPr = paragraph._p.find(qn('w:pPr'))
         if pPr is not None:
-            numPr = pPr.find(qn('w:numPr'))
-            if numPr is not None:
-                # This is a list item
-                enhance_list_item(paragraph, numPr)
+            # Remove paragraph borders (boxes around text)
+            pBdr = pPr.find(qn('w:pBdr'))
+            if pBdr is not None:
+                # Check if this looks like an intentional callout/note box
+                if not _is_intentional_box(paragraph):
+                    pPr.remove(pBdr)
+            
+            # Remove unnecessary shading on regular paragraphs
+            shd = pPr.find(qn('w:shd'))
+            if shd is not None:
+                fill = shd.get(qn('w:fill'))
+                # Only remove if it's a light/subtle background (probably artifact)
+                if fill and fill.upper() in ('F5F5F5', 'F0F0F0', 'EFEFEF', 'FAFAFA', 'E0E0E0'):
+                    if not _is_code_block(paragraph):
+                        pPr.remove(shd)
+        
+        # Clean runs within paragraph
+        clean_paragraph_runs(paragraph)
 
 
-def enhance_list_item(paragraph, numPr):
+def _is_intentional_box(paragraph) -> bool:
     """
-    Enhance individual list item formatting.
+    Detect if a paragraph box is intentional (like a callout, warning, note).
+    """
+    text = paragraph.text.lower().strip()
+    intentional_markers = [
+        'note:', 'warning:', 'caution:', 'important:', 'tip:',
+        '⚠', '📝', '💡', '❗', '✓', '✗'
+    ]
+    return any(marker in text for marker in intentional_markers)
+
+
+def _is_code_block(paragraph) -> bool:
+    """
+    Detect if paragraph is a code block that should keep formatting.
+    """
+    text = paragraph.text.strip()
+    
+    # Check for code-like content
+    code_patterns = [
+        'def ', 'class ', 'import ', 'from ', 'return ',
+        'function ', 'const ', 'let ', 'var ',
+        '#!/', '<?php', '<html', '```',
+        '>>>', '$ ', 'pip install', 'npm install'
+    ]
+    
+    # Check font
+    for run in paragraph.runs:
+        font_name = (run.font.name or '').lower()
+        if any(mono in font_name for mono in ['courier', 'consolas', 'mono', 'code']):
+            return True
+    
+    return any(pattern in text for pattern in code_patterns)
+
+
+def clean_paragraph_runs(paragraph):
+    """
+    Clean text runs - remove unnecessary background shading.
+    """
+    from docx.oxml.ns import qn
+    
+    for run in paragraph.runs:
+        rPr = run._element.find(qn('w:rPr'))
+        if rPr is not None:
+            # Only remove shading from non-code text
+            font_name = (run.font.name or '').lower()
+            is_code_font = any(mono in font_name for mono in ['courier', 'consolas', 'mono', 'code'])
+            
+            if not is_code_font:
+                shd = rPr.find(qn('w:shd'))
+                if shd is not None:
+                    fill = shd.get(qn('w:fill'))
+                    # Remove subtle gray backgrounds (artifacts)
+                    if fill and fill.upper() in ('F5F5F5', 'F0F0F0', 'EFEFEF', 'FAFAFA', 'E0E0E0', 'F8F8F8'):
+                        rPr.remove(shd)
+
+
+def clean_tables(doc):
+    """
+    Clean tables - remove single-cell "fake" tables used as boxes.
+    Convert real tables to clean Word table style.
+    """
+    from docx.oxml.ns import qn
+    from docx.shared import Pt
+    
+    for table in doc.tables:
+        rows = len(table.rows)
+        cols = len(table.columns) if table.rows else 0
+        
+        # Check if this is a real table or a fake box
+        if rows == 1 and cols == 1:
+            # Single cell - likely a box artifact, clean it
+            cell = table.rows[0].cells[0]
+            clean_single_cell_table(table, cell)
+        else:
+            # Real table - apply clean styling
+            apply_clean_table_style(table)
+
+
+def clean_single_cell_table(table, cell):
+    """
+    Clean single-cell tables that are just boxes.
+    Remove borders unless it's intentionally a callout.
+    """
+    from docx.oxml.ns import qn
+    
+    cell_text = cell.text.lower().strip()
+    
+    # Keep borders for intentional callouts
+    if any(marker in cell_text for marker in ['note:', 'warning:', 'caution:', 'important:', 'tip:']):
+        return
+    
+    # Remove table borders for regular single-cell "boxes"
+    tbl = table._tbl
+    tblPr = tbl.find(qn('w:tblPr'))
+    if tblPr is not None:
+        tblBorders = tblPr.find(qn('w:tblBorders'))
+        if tblBorders is not None:
+            tblPr.remove(tblBorders)
+    
+    # Remove cell borders
+    tc = cell._tc
+    tcPr = tc.find(qn('w:tcPr'))
+    if tcPr is not None:
+        tcBorders = tcPr.find(qn('w:tcBorders'))
+        if tcBorders is not None:
+            tcPr.remove(tcBorders)
+        
+        # Remove cell shading
+        shd = tcPr.find(qn('w:shd'))
+        if shd is not None:
+            fill = shd.get(qn('w:fill'))
+            if fill and fill.upper() in ('F5F5F5', 'F0F0F0', 'EFEFEF', 'FAFAFA', 'E0E0E0', 'F8F8F8', 'FFFFFF'):
+                tcPr.remove(shd)
+
+
+def apply_clean_table_style(table):
+    """
+    Apply clean, professional Word table styling.
     """
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
-    from docx.shared import Pt, Twips
     
-    # ============================================
-    # PRESERVE LIST LEVEL (indentation)
-    # ============================================
-    ilvl = numPr.find(qn('w:ilvl'))
-    if ilvl is not None:
-        level = int(ilvl.get(qn('w:val')) or '0')
+    tbl = table._tbl
+    tblPr = tbl.find(qn('w:tblPr'))
+    
+    if tblPr is None:
+        tblPr = OxmlElement('w:tblPr')
+        tbl.insert(0, tblPr)
+    
+    # Remove any indent/shadow effects
+    tblInd = tblPr.find(qn('w:tblInd'))
+    if tblInd is not None:
+        tblPr.remove(tblInd)
+    
+    # Set clean borders
+    tblBorders = tblPr.find(qn('w:tblBorders'))
+    if tblBorders is None:
+        tblBorders = OxmlElement('w:tblBorders')
+        tblPr.append(tblBorders)
+    
+    # Apply subtle, professional borders
+    for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+        border = tblBorders.find(qn(f'w:{border_name}'))
+        if border is None:
+            border = OxmlElement(f'w:{border_name}')
+            tblBorders.append(border)
         
-        # Ensure proper indentation based on level
-        pPr = paragraph._p.get_or_add_pPr()
-        ind = pPr.find(qn('w:ind'))
-        if ind is None:
-            ind = OxmlElement('w:ind')
-            pPr.append(ind)
+        border.set(qn('w:val'), 'single')
+        border.set(qn('w:sz'), '4')  # Thin border
+        border.set(qn('w:color'), 'BFBFBF')  # Light gray - professional look
+        border.set(qn('w:space'), '0')
+
+
+def apply_clean_formatting(doc):
+    """
+    Apply final clean formatting touches.
+    """
+    from docx.shared import Pt
+    from docx.oxml.ns import qn
+    
+    for paragraph in doc.paragraphs:
+        # Ensure consistent paragraph spacing
+        if paragraph.paragraph_format.space_after is None:
+            paragraph.paragraph_format.space_after = Pt(8)
         
-        # Set left indent (360 twips = 0.25 inch per level)
-        left_indent = 720 + (level * 360)
-        ind.set(qn('w:left'), str(left_indent))
-        ind.set(qn('w:hanging'), '360')
+        # Clean up any remaining font issues
+        for run in paragraph.runs:
+            # Normalize fonts - use Calibri for body text
+            font_name = (run.font.name or '').lower()
+            is_mono = any(mono in font_name for mono in ['courier', 'consolas', 'mono', 'code', 'menlo'])
+            
+            if is_mono:
+                # Keep as Consolas for code
+                run.font.name = 'Consolas'
+            elif not run.font.name or run.font.name == 'Times New Roman':
+                # Default to Calibri for cleaner look
+                run.font.name = 'Calibri'
 
 
 # ============================================================
-# LEGACY FUNCTION (kept for backwards compatibility)
+# ENHANCED FORMATTING FUNCTIONS (for documents that need it)
 # ============================================================
+
+def enhance_docx_formatting(docx_path: Path):
+    """
+    Alias for make_docx_native.
+    Kept for backwards compatibility.
+    """
+    make_docx_native(docx_path)
+
 
 def enhance_docx_code_blocks(docx_path: Path):
     """
-    Legacy function - now calls enhance_docx_formatting.
+    Legacy function - now calls make_docx_native.
     Kept for backwards compatibility.
     """
-    enhance_docx_formatting(docx_path)
+    make_docx_native(docx_path)
