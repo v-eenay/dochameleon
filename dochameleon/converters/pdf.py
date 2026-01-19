@@ -1,18 +1,17 @@
 """
 PDF to DOCX conversion utilities - Clean native DOCX output.
+
+This module focuses on producing DOCX files that look like they were
+originally created in Microsoft Word, not converted from PDF.
 """
 
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple, Union, List
 
 
 def convert_pdf_to_docx_enhanced(pdf_file: Path, output_dir: Path) -> Tuple[bool, Union[Path, str]]:
     """
     Convert PDF to DOCX with clean, native Word-like output.
-    
-    The goal is to produce documents that look like they were
-    originally created in Microsoft Word - clean, professional,
-    without unnecessary boxes or frames.
     """
     from pdf2docx import Converter
     
@@ -21,28 +20,30 @@ def convert_pdf_to_docx_enhanced(pdf_file: Path, output_dir: Path) -> Tuple[bool
     try:
         cv = Converter(str(pdf_file))
         
-        # Convert with settings optimized for clean Word-like output
+        # Convert with minimal table detection to avoid fake tables
         cv.convert(
             str(output_path),
-            # Table detection - be conservative to avoid false positives
-            connected_border_tolerance=0.5,
-            min_section_height=20,
+            # CRITICAL: High tolerance = fewer false table detections
+            connected_border_tolerance=1.0,
+            min_section_height=30,
             
-            # Text flow - natural paragraph breaks
+            # Text flow
             line_overlap_threshold=0.9,
             line_break_width_ratio=0.5,
-            line_break_free_space_ratio=0.1,
+            line_break_free_space_ratio=0.15,
             new_paragraph_free_space_ratio=0.85,
             
-            # Images - standard positioning
-            float_image_ignorable_gap=5,
-            page_margin_factor_top=0.5,
-            page_margin_factor_bottom=0.5,
+            # Images
+            float_image_ignorable_gap=10,
+            
+            # Page margins - preserve original
+            page_margin_factor_top=0.0,
+            page_margin_factor_bottom=0.0,
         )
         cv.close()
         
         if output_path.exists():
-            # Clean up the document to look more native
+            # Aggressively clean the document
             make_docx_native(output_path)
             return True, output_path
         else:
@@ -54,40 +55,40 @@ def convert_pdf_to_docx_enhanced(pdf_file: Path, output_dir: Path) -> Tuple[bool
 
 def make_docx_native(docx_path: Path):
     """
-    Post-process DOCX to create clean, native Word-like appearance.
-    
-    Removes unnecessary formatting artifacts and applies clean styling
-    that makes the document look like it was created in Word.
+    Aggressively clean DOCX to look like native Word document.
     """
     try:
         from docx import Document
-        from docx.shared import Pt, Inches
+        from docx.shared import Pt, Inches, Twips
         from docx.oxml.ns import qn
         from docx.oxml import OxmlElement
-        from docx.enum.style import WD_STYLE_TYPE
-        from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
         
         doc = Document(str(docx_path))
         
         # ============================================
-        # CLEAN UP DOCUMENT STYLES
+        # 1. SET PROPER PAGE MARGINS
         # ============================================
-        setup_native_styles(doc)
+        set_page_margins(doc)
         
         # ============================================
-        # CLEAN PARAGRAPHS - Remove box artifacts
+        # 2. REMOVE ALL FAKE TABLES (wrapper tables)
         # ============================================
-        clean_paragraphs(doc)
+        remove_wrapper_tables(doc)
         
         # ============================================
-        # CLEAN TABLES - Only keep real tables
+        # 3. REMOVE ALL PARAGRAPH BORDERS
         # ============================================
-        clean_tables(doc)
+        remove_all_paragraph_borders(doc)
         
         # ============================================
-        # APPLY CLEAN FORMATTING
+        # 4. CLEAN HEADING STYLES
         # ============================================
-        apply_clean_formatting(doc)
+        clean_headings(doc)
+        
+        # ============================================
+        # 5. APPLY CLEAN DOCUMENT STYLES
+        # ============================================
+        apply_native_styles(doc)
         
         doc.save(str(docx_path))
         
@@ -95,174 +96,241 @@ def make_docx_native(docx_path: Path):
         print(f"  Note: Could not clean document: {e}")
 
 
-def setup_native_styles(doc):
+def set_page_margins(doc):
     """
-    Set up clean, native Word styles.
+    Set proper Word-standard page margins (1 inch all around).
     """
-    from docx.shared import Pt, RGBColor
-    from docx.enum.style import WD_STYLE_TYPE
-    
-    # Set default document font
-    style = doc.styles['Normal']
-    font = style.font
-    font.name = 'Calibri'
-    font.size = Pt(11)
-    
-    # Clean paragraph formatting
-    paragraph_format = style.paragraph_format
-    paragraph_format.space_before = Pt(0)
-    paragraph_format.space_after = Pt(8)
-    paragraph_format.line_spacing = 1.15
-
-
-def clean_paragraphs(doc):
-    """
-    Clean paragraph formatting - remove unnecessary borders and boxes.
-    """
+    from docx.shared import Inches
     from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
     
-    for paragraph in doc.paragraphs:
-        pPr = paragraph._p.find(qn('w:pPr'))
-        if pPr is not None:
-            # Remove paragraph borders (boxes around text)
-            pBdr = pPr.find(qn('w:pBdr'))
-            if pBdr is not None:
-                # Check if this looks like an intentional callout/note box
-                if not _is_intentional_box(paragraph):
-                    pPr.remove(pBdr)
-            
-            # Remove unnecessary shading on regular paragraphs
-            shd = pPr.find(qn('w:shd'))
-            if shd is not None:
-                fill = shd.get(qn('w:fill'))
-                # Only remove if it's a light/subtle background (probably artifact)
-                if fill and fill.upper() in ('F5F5F5', 'F0F0F0', 'EFEFEF', 'FAFAFA', 'E0E0E0'):
-                    if not _is_code_block(paragraph):
-                        pPr.remove(shd)
+    for section in doc.sections:
+        # Standard Word margins: 1 inch all around
+        section.top_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.right_margin = Inches(1)
         
-        # Clean runs within paragraph
-        clean_paragraph_runs(paragraph)
+        # Also set header/footer distances
+        section.header_distance = Inches(0.5)
+        section.footer_distance = Inches(0.5)
 
 
-def _is_intentional_box(paragraph) -> bool:
+def remove_wrapper_tables(doc):
     """
-    Detect if a paragraph box is intentional (like a callout, warning, note).
-    """
-    text = paragraph.text.lower().strip()
-    intentional_markers = [
-        'note:', 'warning:', 'caution:', 'important:', 'tip:',
-        '⚠', '📝', '💡', '❗', '✓', '✗'
-    ]
-    return any(marker in text for marker in intentional_markers)
-
-
-def _is_code_block(paragraph) -> bool:
-    """
-    Detect if paragraph is a code block that should keep formatting.
-    """
-    text = paragraph.text.strip()
+    Remove tables that are just wrappers (not real data tables).
     
-    # Check for code-like content
-    code_patterns = [
-        'def ', 'class ', 'import ', 'from ', 'return ',
-        'function ', 'const ', 'let ', 'var ',
-        '#!/', '<?php', '<html', '```',
-        '>>>', '$ ', 'pip install', 'npm install'
-    ]
-    
-    # Check font
-    for run in paragraph.runs:
-        font_name = (run.font.name or '').lower()
-        if any(mono in font_name for mono in ['courier', 'consolas', 'mono', 'code']):
-            return True
-    
-    return any(pattern in text for pattern in code_patterns)
-
-
-def clean_paragraph_runs(paragraph):
-    """
-    Clean text runs - remove unnecessary background shading.
+    Wrapper tables are typically:
+    - Single row tables
+    - Tables where cells contain mostly paragraphs (not tabular data)
+    - Tables used as layout containers
     """
     from docx.oxml.ns import qn
     
-    for run in paragraph.runs:
-        rPr = run._element.find(qn('w:rPr'))
-        if rPr is not None:
-            # Only remove shading from non-code text
-            font_name = (run.font.name or '').lower()
-            is_code_font = any(mono in font_name for mono in ['courier', 'consolas', 'mono', 'code'])
-            
-            if not is_code_font:
-                shd = rPr.find(qn('w:shd'))
-                if shd is not None:
-                    fill = shd.get(qn('w:fill'))
-                    # Remove subtle gray backgrounds (artifacts)
-                    if fill and fill.upper() in ('F5F5F5', 'F0F0F0', 'EFEFEF', 'FAFAFA', 'E0E0E0', 'F8F8F8'):
-                        rPr.remove(shd)
-
-
-def clean_tables(doc):
-    """
-    Clean tables - remove single-cell "fake" tables used as boxes.
-    Convert real tables to clean Word table style.
-    """
-    from docx.oxml.ns import qn
-    from docx.shared import Pt
+    tables_to_process = list(doc.tables)
     
-    for table in doc.tables:
+    for table in tables_to_process:
         rows = len(table.rows)
         cols = len(table.columns) if table.rows else 0
         
-        # Check if this is a real table or a fake box
+        # Determine if this is a real table or a wrapper
+        is_wrapper = False
+        
+        # Single cell = definitely a wrapper
         if rows == 1 and cols == 1:
-            # Single cell - likely a box artifact, clean it
-            cell = table.rows[0].cells[0]
-            clean_single_cell_table(table, cell)
+            is_wrapper = True
+        
+        # Single row with few columns = likely a wrapper/layout
+        elif rows == 1 and cols <= 2:
+            is_wrapper = True
+        
+        # Check if it looks like a heading wrapper
+        elif rows <= 2:
+            cell_text = ""
+            for row in table.rows:
+                for cell in row.cells:
+                    cell_text += cell.text.strip()
+            # Short text in few rows = likely wrapper
+            if len(cell_text) < 200 and rows == 1:
+                is_wrapper = True
+        
+        if is_wrapper:
+            # Remove all borders from wrapper tables
+            remove_table_borders(table)
+            # Also remove cell borders and shading
+            for row in table.rows:
+                for cell in row.cells:
+                    remove_cell_formatting(cell)
         else:
             # Real table - apply clean styling
             apply_clean_table_style(table)
 
 
-def clean_single_cell_table(table, cell):
+def remove_table_borders(table):
     """
-    Clean single-cell tables that are just boxes.
-    Remove borders unless it's intentionally a callout.
+    Remove all borders from a table.
     """
     from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
     
-    cell_text = cell.text.lower().strip()
-    
-    # Keep borders for intentional callouts
-    if any(marker in cell_text for marker in ['note:', 'warning:', 'caution:', 'important:', 'tip:']):
-        return
-    
-    # Remove table borders for regular single-cell "boxes"
     tbl = table._tbl
     tblPr = tbl.find(qn('w:tblPr'))
+    
     if tblPr is not None:
+        # Remove table borders
         tblBorders = tblPr.find(qn('w:tblBorders'))
         if tblBorders is not None:
             tblPr.remove(tblBorders)
+        
+        # Add explicit "no borders"
+        tblBorders = OxmlElement('w:tblBorders')
+        for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+            border = OxmlElement(f'w:{border_name}')
+            border.set(qn('w:val'), 'nil')
+            tblBorders.append(border)
+        tblPr.append(tblBorders)
+        
+        # Remove table indent
+        tblInd = tblPr.find(qn('w:tblInd'))
+        if tblInd is not None:
+            tblPr.remove(tblInd)
+
+
+def remove_cell_formatting(cell):
+    """
+    Remove borders and shading from a cell.
+    """
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
     
-    # Remove cell borders
     tc = cell._tc
     tcPr = tc.find(qn('w:tcPr'))
+    
     if tcPr is not None:
+        # Remove cell borders
         tcBorders = tcPr.find(qn('w:tcBorders'))
         if tcBorders is not None:
             tcPr.remove(tcBorders)
         
-        # Remove cell shading
+        # Add explicit "no borders"
+        tcBorders = OxmlElement('w:tcBorders')
+        for border_name in ['top', 'left', 'bottom', 'right']:
+            border = OxmlElement(f'w:{border_name}')
+            border.set(qn('w:val'), 'nil')
+            tcBorders.append(border)
+        tcPr.append(tcBorders)
+        
+        # Remove shading
         shd = tcPr.find(qn('w:shd'))
         if shd is not None:
-            fill = shd.get(qn('w:fill'))
-            if fill and fill.upper() in ('F5F5F5', 'F0F0F0', 'EFEFEF', 'FAFAFA', 'E0E0E0', 'F8F8F8', 'FFFFFF'):
-                tcPr.remove(shd)
+            tcPr.remove(shd)
+    
+    # Also clean paragraphs within cell
+    for paragraph in cell.paragraphs:
+        remove_paragraph_borders(paragraph)
+
+
+def remove_all_paragraph_borders(doc):
+    """
+    Remove ALL borders from ALL paragraphs.
+    This is aggressive but necessary to get clean output.
+    """
+    from docx.oxml.ns import qn
+    
+    for paragraph in doc.paragraphs:
+        remove_paragraph_borders(paragraph)
+    
+    # Also remove from table cells
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    remove_paragraph_borders(paragraph)
+
+
+def remove_paragraph_borders(paragraph):
+    """
+    Remove all borders and unnecessary shading from a paragraph.
+    """
+    from docx.oxml.ns import qn
+    
+    pPr = paragraph._p.find(qn('w:pPr'))
+    if pPr is not None:
+        # Remove paragraph borders completely
+        pBdr = pPr.find(qn('w:pBdr'))
+        if pBdr is not None:
+            pPr.remove(pBdr)
+        
+        # Remove paragraph shading (backgrounds)
+        shd = pPr.find(qn('w:shd'))
+        if shd is not None:
+            pPr.remove(shd)
+        
+        # Remove frames
+        framePr = pPr.find(qn('w:framePr'))
+        if framePr is not None:
+            pPr.remove(framePr)
+    
+    # Clean runs too
+    for run in paragraph.runs:
+        rPr = run._element.find(qn('w:rPr'))
+        if rPr is not None:
+            # Remove run shading (text backgrounds) except for intentional highlights
+            shd = rPr.find(qn('w:shd'))
+            if shd is not None:
+                fill = shd.get(qn('w:fill'))
+                # Remove gray backgrounds (artifacts), keep colored highlights
+                if fill and fill.upper() in ('F5F5F5', 'F0F0F0', 'EFEFEF', 'FAFAFA', 
+                                               'E0E0E0', 'F8F8F8', 'E8E8E8', 'D0D0D0',
+                                               'FFFFFF', 'auto'):
+                    rPr.remove(shd)
+
+
+def clean_headings(doc):
+    """
+    Ensure headings are clean and properly styled.
+    """
+    from docx.shared import Pt, RGBColor
+    from docx.oxml.ns import qn
+    
+    for paragraph in doc.paragraphs:
+        # Detect headings by style or formatting
+        is_heading = False
+        style_name = paragraph.style.name if paragraph.style else ''
+        
+        if 'Heading' in style_name or 'Title' in style_name:
+            is_heading = True
+        else:
+            # Check if it looks like a heading (bold, larger font, short text)
+            text = paragraph.text.strip()
+            if len(text) < 100 and len(text) > 0:
+                for run in paragraph.runs:
+                    if run.bold and run.font.size and run.font.size >= Pt(12):
+                        is_heading = True
+                        break
+        
+        if is_heading:
+            # Ensure heading has no borders or boxes
+            pPr = paragraph._p.find(qn('w:pPr'))
+            if pPr is not None:
+                # Remove any borders
+                pBdr = pPr.find(qn('w:pBdr'))
+                if pBdr is not None:
+                    pPr.remove(pBdr)
+                
+                # Remove shading
+                shd = pPr.find(qn('w:shd'))
+                if shd is not None:
+                    pPr.remove(shd)
+            
+            # Set proper heading spacing
+            paragraph.paragraph_format.space_before = Pt(12)
+            paragraph.paragraph_format.space_after = Pt(6)
 
 
 def apply_clean_table_style(table):
     """
-    Apply clean, professional Word table styling.
+    Apply clean styling to real data tables.
     """
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
@@ -274,71 +342,81 @@ def apply_clean_table_style(table):
         tblPr = OxmlElement('w:tblPr')
         tbl.insert(0, tblPr)
     
-    # Remove any indent/shadow effects
-    tblInd = tblPr.find(qn('w:tblInd'))
-    if tblInd is not None:
-        tblPr.remove(tblInd)
-    
-    # Set clean borders
+    # Remove existing borders
     tblBorders = tblPr.find(qn('w:tblBorders'))
-    if tblBorders is None:
-        tblBorders = OxmlElement('w:tblBorders')
-        tblPr.append(tblBorders)
+    if tblBorders is not None:
+        tblPr.remove(tblBorders)
     
-    # Apply subtle, professional borders
+    # Add clean, subtle borders
+    tblBorders = OxmlElement('w:tblBorders')
     for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
-        border = tblBorders.find(qn(f'w:{border_name}'))
-        if border is None:
-            border = OxmlElement(f'w:{border_name}')
-            tblBorders.append(border)
-        
+        border = OxmlElement(f'w:{border_name}')
         border.set(qn('w:val'), 'single')
-        border.set(qn('w:sz'), '4')  # Thin border
-        border.set(qn('w:color'), 'BFBFBF')  # Light gray - professional look
+        border.set(qn('w:sz'), '4')
+        border.set(qn('w:color'), 'BFBFBF')  # Light gray
         border.set(qn('w:space'), '0')
+        tblBorders.append(border)
+    tblPr.append(tblBorders)
+    
+    # Clean cell formatting
+    for row in table.rows:
+        for cell in row.cells:
+            tc = cell._tc
+            tcPr = tc.find(qn('w:tcPr'))
+            if tcPr is not None:
+                # Remove cell shading
+                shd = tcPr.find(qn('w:shd'))
+                if shd is not None:
+                    fill = shd.get(qn('w:fill'))
+                    # Remove gray backgrounds
+                    if fill and fill.upper() in ('F5F5F5', 'F0F0F0', 'EFEFEF', 'FAFAFA',
+                                                   'E0E0E0', 'F8F8F8', 'FFFFFF'):
+                        tcPr.remove(shd)
 
 
-def apply_clean_formatting(doc):
+def apply_native_styles(doc):
     """
-    Apply final clean formatting touches.
+    Apply clean, native Word styling to the entire document.
     """
-    from docx.shared import Pt
+    from docx.shared import Pt, RGBColor
     from docx.oxml.ns import qn
     
+    # Set Normal style
+    try:
+        style = doc.styles['Normal']
+        style.font.name = 'Calibri'
+        style.font.size = Pt(11)
+        style.paragraph_format.space_after = Pt(8)
+        style.paragraph_format.line_spacing = 1.15
+    except:
+        pass
+    
+    # Clean all paragraphs
     for paragraph in doc.paragraphs:
-        # Ensure consistent paragraph spacing
+        # Set proper spacing
         if paragraph.paragraph_format.space_after is None:
             paragraph.paragraph_format.space_after = Pt(8)
         
-        # Clean up any remaining font issues
+        # Clean fonts
         for run in paragraph.runs:
-            # Normalize fonts - use Calibri for body text
             font_name = (run.font.name or '').lower()
-            is_mono = any(mono in font_name for mono in ['courier', 'consolas', 'mono', 'code', 'menlo'])
+            is_mono = any(m in font_name for m in ['courier', 'consolas', 'mono', 'code', 'menlo'])
             
             if is_mono:
-                # Keep as Consolas for code
                 run.font.name = 'Consolas'
-            elif not run.font.name or run.font.name == 'Times New Roman':
-                # Default to Calibri for cleaner look
+            elif not run.font.name or 'times' in font_name.lower():
                 run.font.name = 'Calibri'
 
 
 # ============================================================
-# ENHANCED FORMATTING FUNCTIONS (for documents that need it)
+# BACKWARDS COMPATIBILITY
 # ============================================================
 
 def enhance_docx_formatting(docx_path: Path):
-    """
-    Alias for make_docx_native.
-    Kept for backwards compatibility.
-    """
+    """Alias for backwards compatibility."""
     make_docx_native(docx_path)
 
 
 def enhance_docx_code_blocks(docx_path: Path):
-    """
-    Legacy function - now calls make_docx_native.
-    Kept for backwards compatibility.
-    """
+    """Alias for backwards compatibility."""
     make_docx_native(docx_path)
