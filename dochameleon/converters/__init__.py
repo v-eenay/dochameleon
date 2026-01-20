@@ -8,6 +8,8 @@ from .pdf import (
     make_docx_native,
     enhance_docx_formatting,
     enhance_docx_code_blocks,
+    add_hyperlink,
+    extract_pdf_hyperlinks,
 )
 from .docx import convert_docx_to_pdf
 
@@ -19,4 +21,6 @@ __all__ = [
     'enhance_docx_formatting',
     'enhance_docx_code_blocks',
     'convert_docx_to_pdf',
+    'add_hyperlink',
+    'extract_pdf_hyperlinks',
 ]
