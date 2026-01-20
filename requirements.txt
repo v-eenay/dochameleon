@@ -2,4 +2,4 @@ pdf2docx>=0.5.6
 python-docx>=0.8.11
 docx2pdf>=0.1.8
 qtpy>=2.4.0
-pyqt6>=6.5.0
+pyqt6>=6.5.0PyMuPDF>=1.23.0
